@@ -1,0 +1,55 @@
+using Microsoft.EntityFrameworkCore;
+using Todo.API.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<TodoDbContext>(opt => opt.UseInMemoryDatabase("TodoList"));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+var app = builder.Build();
+
+app.MapGet("/todoitems", async (TodoDbContext db) =>
+    await db.Todos.ToListAsync());
+
+app.MapGet("/todoitems/complete", async (TodoDbContext db) =>
+    await db.Todos.Where(t => t.IsComplete).ToListAsync());
+
+app.MapGet("/todoitems/{id}", async (int id, TodoDbContext db) =>
+    await db.Todos.FindAsync(id)
+        is TodoItem todo
+            ? Results.Ok(todo)
+            : Results.NotFound());
+
+app.MapPost("/todoitems", async (TodoItem todo, TodoDbContext db) =>
+{
+    db.Todos.Add(todo);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/todoitems/{todo.Id}", todo);
+});
+
+app.MapPut("/todoitems/{id}", async (int id, TodoItem inputTodo, TodoDbContext db) =>
+{
+    var todo = await db.Todos.FindAsync(id);
+
+    if (todo is null) return Results.NotFound();
+
+    todo.Title = inputTodo.Title;
+    todo.IsComplete = inputTodo.IsComplete;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+app.MapDelete("/todoitems/{id}", async (int id, TodoDbContext db) =>
+{
+    if (await db.Todos.FindAsync(id) is TodoItem todo)
+    {
+        db.Todos.Remove(todo);
+        await db.SaveChangesAsync();
+        return Results.Ok(todo);
+    }
+
+    return Results.NotFound();
+});
+
+app.Run();
