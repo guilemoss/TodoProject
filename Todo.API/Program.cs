@@ -4,20 +4,26 @@ using Todo.API.Data;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<TodoDbContext>(opt => opt.UseInMemoryDatabase("TodoList"));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
-RouteGroupBuilder todoItems = app.MapGroup("/todoitems");
+app.MapSwagger();
+app.UseSwaggerUI();
 
-todoItems.MapGet("/", GetAllTodos);
-todoItems.MapGet("/complete", GetCompleteTodos);
-todoItems.MapGet("/{id}", GetTodo);
-todoItems.MapPost("/", CreateTodo);
-todoItems.MapPut("/{id}", UpdateTodo);
-todoItems.MapDelete("/{id}", DeleteTodo);
+RouteGroupBuilder todos = app.MapGroup("/v1/todos");
 
-RouteGroupBuilder todoItemsByAdmin = app.MapGroup("/admin/todoitems");
+todos.MapGet("/", GetAllTodos);
+todos.MapGet("/complete", GetCompleteTodos);
+todos.MapGet("/{id}", GetTodo);
+todos.MapPost("/", CreateTodo);
+todos.MapPut("/{id}", UpdateTodo);
+todos.MapDelete("/{id}", DeleteTodo);
 
-todoItemsByAdmin.MapGet("/", GetAllTodosByAdminMode);
+RouteGroupBuilder todosByAdmin = app.MapGroup("/v1/admin/todos");
+
+todosByAdmin.MapGet("/", GetAllTodosByAdminMode);
 
 app.Run();
 
@@ -55,7 +61,7 @@ static async Task<IResult> CreateTodo(TodoItemDTO todoItemDTO, TodoDbContext db)
 
     todoItemDTO = new TodoItemDTO(todoItem);
 
-    return TypedResults.Created($"/todoitems/{todoItem.Id}", todoItemDTO);
+    return TypedResults.Created($"/v1/todos/{todoItem.Id}", todoItemDTO);
 }
 
 static async Task<IResult> UpdateTodo(int id, TodoItemDTO todoItemDTO, TodoDbContext db)
